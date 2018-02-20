@@ -1,0 +1,64 @@
+#!/usr/bin/env node
+
+// ./event add "woot"
+// ./event delete "woot" or by ID
+// ./event list
+
+const args = process.argv.slice(2);
+const MongoClient = require('mongodb').MongoClient;
+const ObjectId = require('mongodb').ObjectID;
+
+const options = {
+  ADD: 'ADD',
+  DELETE: 'DELETE',
+  LIST: 'LIST'
+}
+
+// check if we have enough args to run commands
+if(args.length < 1){
+  console.log('Not enough params brah!');
+  console.log('options', Object.keys(options));
+  return;
+}
+
+// Connect to the db
+MongoClient.connect('mongodb://localhost:27017/dojo', function(err, client) {
+  if(!err) { /*console.log('Connected to MongoDB'); */}
+
+  var db = client.db('dojo');
+
+  const options = {
+    ADD: 'ADD',
+    DELETE: 'DELETE',
+    LIST: 'LIST'
+  }
+  
+  // get event type
+  const command = args[0].toUpperCase();
+  const data = args[1];
+  
+  // choose action to perform
+  switch(command) {
+    case options.ADD: 
+      const eventText = data;
+      console.log(`adding event - ${eventText}`);
+      db.collection('events').insert({'date': new Date(), 'event': eventText});
+      break;
+    case options.DELETE: 
+      if(Number.isInteger(parseInt(data,10))){
+        db.collection('events').remove({ "_id": ObjectId(`${data}`)} )
+        console.log(`deleted by event id: ${data}`);
+      } else {
+        db.collection('events').remove({ "event": `${data}` })
+        console.log(`deleted by event name: ${data}`);
+      }
+      break;
+    case options.LIST:
+      db.collection('events').find({}).forEach( function(e) { 
+        console.log(`event: ${e.event}, id: ${e._id}, data: ${e.date}`); 
+      });
+      break;
+  }
+
+  client.close();
+});
